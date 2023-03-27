@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Spelling Practise</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Spelling Practise</h1>
+
+        <!-- Display flash messages (response to user input) -->
+        <div id="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul>
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+                {% set score = session["correct"]|string + "/" + session["total_attempts"]|string %}
+            {% else %}
+                {% set score = "0/0" %}
+            {% endif %}
+        {% endwith %}
+        </div>
+
+        <!-- Audio elements for correct and incorrect feedback -->
+        <audio id="correct-sound" src="{{ url_for('static', filename='correct.wav') }}" preload="auto"></audio>
+        <audio id="incorrect-sound" src="{{ url_for('static', filename='incorrect.wav') }}" preload="auto"></audio>
+
+        <!-- Spelling practise form -->
+        <form action="{{ url_for('practise') }}" method="POST">
+            <input type="hidden" id="word" name="correct_word" value="{{ word }}">
+            <button type="button" id="speak">Hear the Word</button>
+            <label for="user_input">Enter the spelling:</label>
+            <input type="text" id="user_input" name="user_input" autocomplete="off" required>
+            <button type="submit">Check Answer</button>
+        </form>
+
+        <!-- Display user's score -->
+        <div id="score">Score: {{ session["correct"]|string }}/{{ session["total_attempts"]|string }}</div>
+
+        <!-- Reset score and return to main menu form -->
+        <form id="reset-score-form" method="POST">
+            <button type="submit">Back to Main Menu</button>
+        </form>
+    </div>
+
+    <!-- JavaScript for handling user interactions and updating the page -->
+    <script>
+        // Function to speak the word and update UI
+        function speakWord() {
+            let word = document.getElementById("word").value;
+            let utterance = new SpeechSynthesisUtterance(word);
+        
+            // Get available voices
+            let voices = window.speechSynthesis.getVoices();
+        
+            // Filter voices for English accent (e.g., by looking for "en-GB" language tag)
+            let englishVoices = voices.filter(voice => voice.lang.startsWith("en-GB"));
+        
+            // If English voices are available, select the first one
+            if (englishVoices.length > 0) {
+                utterance.voice = englishVoices[0];
+            }
+        
+            window.speechSynthesis.speak(utterance);
+
+            // Set focus to the input field
+            document.getElementById("user_input").focus();
+        
+            // Hide flash messages
+            let flashMessages = document.getElementById("flash-messages");
+            flashMessages.style.display = "none";
+        }
+        
+        // Update the score display
+        document.getElementById("score").textContent = "Score: " + document.cookie.replace(/(?:(?:^|.*;\s*)score\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        
+        // Add event listener to the speak button
+        document.getElementById("speak").addEventListener("click", function() {
+            // Check if voices are already loaded
+            if (window.speechSynthesis.getVoices().length !== 0) {
+                speakWord();
+            } else {
+                // If voices are not yet loaded, wait for the voiceschanged event
+                window.speechSynthesis.addEventListener("voiceschanged", function() {
+                    speakWord();
+                });
+            }
+        });
+
+        // Hide flash messages
+        let flashMessages = document.getElementById("flash-messages");
+        flashMessages.style.display = "none";
+
+        // Add event listener to the form submission
+        document.querySelector("form").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            // Create a FormData object from the form
+            const formData = new FormData(event.target);
+
+            // Send an AJAX request to the server
+            fetch("{{ url_for('practise') }}", {
+                method: "POST",
+                body: formData,
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                // Update the score display
+                document.getElementById("score").textContent = "Score: " + data.score;
+
+                // Update the word on the page
+                document.getElementById("word").value = data.next_word;
+
+                // Play the correct or incorrect sound
+                const correctSound = document.getElementById("correct-sound");
+                const incorrectSound = document.getElementById("incorrect-sound");
+
+                if (data.sound === "correct") {
+                    correctSound.play();
+                } else if (data.sound === "incorrect") {
+                    incorrectSound.play();
+                }
+
+                // Display the response message
+                const flashMessages = document.getElementById("flash-messages");
+                flashMessages.innerHTML = `<ul><li class="${data.response_data.status}">${data.response_data.message}</li></ul>`;
+                flashMessages.style.display = "block";
+
+                // Clear the input field
+                document.getElementById("user_input").value = "";
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+        });
+
+        // Add event listener to the reset score form
+        document.getElementById("reset-score-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            // Send an AJAX request to reset the score
+            fetch("{{ url_for('reset_score') }}", {
+                method: "POST",
+            })
+            .then((response) => {
+                if (response.ok) {
+                    // Update the score display to 0/0
+                    document.getElementById("score").textContent = "Score: 0/0";
+
+                    // Redirect to the index page
+                    window.location.href = "{{ url_for('index') }}";
+                } else {
+                    console.error("Error resetting score:", response.statusText);
+                }
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+        });
+
+    </script>
+</body>
+</html>

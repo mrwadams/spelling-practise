@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Update Word List</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Update Word List</h1>
+        <form action="{{ url_for('update_word_list') }}" method="POST">
+            <label for="words">Enter new words (one per line):</label>
+            <textarea id="words" name="words" rows="10" cols="30">{{ current_words }}</textarea>
+            <button type="submit">Update Word List</button>
+        </form>
+        <a href="{{ url_for('index') }}">Back to Main Menu</a>
+    </div>
+</body>
+</html>

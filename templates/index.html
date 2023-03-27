@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Spelling Test</title>
+</head>
+<body>
+    <div class="container">
+        <!-- Main heading -->
+        <h1>Spelling Practise</h1>
+        
+        <!-- Subheading for this week's words -->
+        <h2>This week's words:</h2>
+        
+        <!-- Display the word list -->
+        <ul>
+            {% for word in word_list %}
+                <li>{{ word }}</li>
+            {% endfor %}
+        </ul>
+        
+        <!-- Navigation links -->
+        <a href="{{ url_for('practise') }}">Practise Spellings</a>
+        <a href="{{ url_for('update_word_list') }}">Update Word List</a>
+    </div>
+</body>
+</html>
